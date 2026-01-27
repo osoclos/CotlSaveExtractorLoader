@@ -19,7 +19,7 @@ namespace CotlSaveExtractorLoader
         public const string Id = "mod.osoclos.cotl.save-extractor-loader";
         public const string Name = "Cult of the Lamb Save File Extractor and Loader";
 
-        public const string Version = "1.0.0.0";
+        public const string Version = "1.0.0.1";
     }
 
     [BepInPlugin(Metadata.Id, Metadata.Name, Metadata.Version)]
@@ -76,6 +76,9 @@ namespace CotlSaveExtractorLoader
         [HarmonyPrefix]
         public static bool SaveFileManager_Read(ref string filename)
         {
+            bool isSaveFile = filename.StartsWith("slot_");
+            if (!isSaveFile) return true;
+
             string parsedFilename = ParseRawFilename(filename);
 
             if (forceLoadJson.Value && File.Exists(Path.Combine(saveDirPath, parsedFilename))) filename = parsedFilename;
