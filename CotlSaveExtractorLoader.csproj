@@ -33,8 +33,6 @@
 
 		<BepinexDirPath>$(RootDirPath)BepInEx\</BepinexDirPath>
 		<PluginDirPath>$(BepinexDirPath)plugins\</PluginDirPath>
-		
-		<DistDirPath>$(SolutionDir)dist\</DistDirPath>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -78,11 +76,6 @@
 
 			xcopy "$(TargetDir)$(SolutionName).dll" "$(PluginDirPath)$(SolutionName)\" /Y /I
 			xcopy "$(TargetDir)$(SolutionName).pdb" "$(PluginDirPath)$(SolutionName)\" /Y /I
-
-			mkdir $(DistDirPath)
-
-			xcopy "$(TargetDir)$(SolutionName).dll" $(DistDirPath) /Y /I
-			xcopy "$(TargetDir)$(SolutionName).pdb" $(DistDirPath) /Y /I
 		</PostBuildEvent>
 	</PropertyGroup>
 </Project>
