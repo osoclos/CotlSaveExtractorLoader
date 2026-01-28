@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Security.Cryptography;
 
 using UnityEngine;
 
@@ -82,6 +81,8 @@ namespace CotlSaveExtractorLoader
             string parsedFilename = ParseRawFilename(filename);
 
             if (forceLoadJson.Value && File.Exists(Path.Combine(saveDirPath, parsedFilename))) filename = parsedFilename;
+            _logger.LogMessage("Loading extracted \"" + filename + "\" save file...");
+
             return true;
         }
 
