@@ -18,7 +18,7 @@ namespace CotlSaveExtractorLoader
         public const string Id = "mod.osoclos.cotl.save-extractor-loader";
         public const string Name = "Cult of the Lamb Save File Extractor and Loader";
 
-        public const string Version = "1.0.0.1";
+        public const string Version = "1.0.0.2";
     }
 
     [BepInPlugin(Metadata.Id, Metadata.Name, Metadata.Version)]
