@@ -45,9 +45,9 @@ After installing the plugin, you can run Cult of the Lamb like how you normally 
 
 1. Load up any save file of your choice and save the game file upon completing loading of said file.
 
-![An extracted version of your save file in a `.json` format can then be located and modified](assets/open-extracted-save.gif)
+![An extracted version of your save file in a `.json` format with the title of `slot_#-extracted.json` can then be located and modified](assets/open-extracted-save.gif)
 
-2. After saving, an extracted version of your save file can be located in your saves folder as a `.json` format. From there, you can modify it using a program (such as Notepad++) and change the values in the `.json` file.
+2. After saving, an extracted version of your save file can be located in your saves folder as a `.json` format (By default, this file will be named `slot_#-extracted.json`). From there, you can modify it using a program (such as Notepad++) and change the values in the `.json` file.
 
 ### Example modification (Changing the quantity of a specific item)
 
@@ -77,7 +77,7 @@ This contains the description of configuration entries for this plugin. (`mod.os
 
 Enable extraction of save files.
 
-### `ExtractedJsonSuffix` (default: `extracted`)
+### `ExtractedJsonSuffix` (default: `"extracted"`)
 
 The string that will be appended after the filename to prevent overwriting of the default `slot_#.json` file. Leaving it empty will overwrite it.
 
