@@ -27,33 +27,33 @@ namespace CotlSaveExtractorLoader
     [HarmonyPatch]
     public class Plugin: BaseUnityPlugin
     {
-		public static ConfigEntry<bool> isEnabled;
+        public static ConfigEntry<bool> isEnabled;
 
         public static ConfigEntry<string> jsonSuffix;
         public static ConfigEntry<bool> forceLoadJson;
 
-		public static string saveDirPath;
+        public static string saveDirPath;
 
-		private static ManualLogSource _logger;
+        private static ManualLogSource _logger;
 
         private void Awake()
         {
             isEnabled = Config.Bind("Enabled/Disabled", "ExtractSaveFiles", true, "Enable extraction of save files.");
-			if (!isEnabled.Value)
-			{
-				Logger.LogInfo("Plugin is disabled! No extraction of save files nor loading of extracted .json files will occur!");
-				return;
-			}
+            if (!isEnabled.Value)
+            {
+                Logger.LogInfo("Plugin is disabled! No extraction of save files nor loading of extracted .json files will occur!");
+                return;
+            }
 
             jsonSuffix = Config.Bind("General", "ExtractedJsonSuffix", "extracted", "The string that will be appended after the filename to prevent overwriting of the default slot_#.json file. Leaving it empty will overwrite it.");
             forceLoadJson = Config.Bind("General", "ForceLoadJsonFiles", true, "Whether to read the extracted .json save files instead of the .mp save files, if available.");
 
             saveDirPath = Path.Combine(Application.persistentDataPath, "saves");
 
-			_logger = Logger;
+            _logger = Logger;
 
             Harmony.CreateAndPatchAll(typeof(Plugin));
-			Logger.LogMessage("Plugin has been loaded!");
+            Logger.LogMessage("Plugin has been loaded!");
         }
 
         [HarmonyPatch(typeof(SaveFileManager), "Write")]
@@ -61,11 +61,11 @@ namespace CotlSaveExtractorLoader
         public static void SaveFileManager_Write(SaveFileManager __instance, DataManager data, string filename, bool encrypt, bool backup)
         {
             bool isSaveFile = filename.StartsWith("slot_");
-			if (!isSaveFile) return;
+            if (!isSaveFile) return;
 
             var WriteJson = AccessTools.MethodDelegate<Action<SaveFileManager, DataManager, string, bool, bool>>(AccessTools.Method(typeof(SaveFileManager), "WriteJson"));
 
-			string parsedFilename = ParseRawFilename(filename);
+            string parsedFilename = ParseRawFilename(filename);
             WriteJson.Invoke(__instance, data, parsedFilename, false, false);
 
             _logger.LogMessage("Extraction of \"" + filename + "\" is complete and saved as \"" + parsedFilename + "\".");
@@ -87,8 +87,8 @@ namespace CotlSaveExtractorLoader
         }
 
         private static string ParseRawFilename(string filename)
-		{
-			return Path.ChangeExtension(jsonSuffix.Value == "" ? filename : Path.GetFileNameWithoutExtension(filename) + "-" + jsonSuffix.Value, ".json");
-		}
+        {
+            return Path.ChangeExtension(jsonSuffix.Value == "" ? filename : Path.GetFileNameWithoutExtension(filename) + "-" + jsonSuffix.Value, ".json");
+        }
     }
 }
