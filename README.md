@@ -71,6 +71,14 @@ There is a lot of data that you can mess around with in the extracted `.json` sa
 
 ## Docs
 
+Some of the save file data, such as item IDs, are not alphabetical identifiers and as such, can be difficult to decipher without any references.
+
+While most of them can be deciphered by decompiling the game, I want to make it easy for the average player to do so. Therefore, a compiled list is necessary if I want to meet that goal.
+
+Fortunately, people have made such [a list](https://docs.google.com/spreadsheets/d/13o-pZMtQHzecb0qvWwSIXex53NpUZNZphtvm4agTNJg/edit?usp=drivesdk) and to give credit where credit is due, I would like to thank `@friendofsilkies` over on Discord for providing it!
+
+## Configuration Options
+
 This contains the description of configuration entries for this plugin. (`mod.osoclos.cotl.save-extractor-loader.cfg`)
 
 ### `ExtractSaveFiles` (default: `true`)
