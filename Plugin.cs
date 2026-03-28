@@ -30,42 +30,62 @@ namespace CotlSaveExtractorLoader
     [HarmonyPatch]
     public class Plugin: BaseUnityPlugin
     {
-        public static ConfigEntry<bool> isEnabled;
+        private static ManualLogSource _logger;
 
-        public static ConfigEntry<string> jsonSuffix;
-        public static ConfigEntry<bool> forceLoadJson;
+        public static class Settings
+        {
+            public readonly struct SECTION_NAMES
+            {
+                public const string ENABLED_DISABLED = "Enabled/Disabled";
+                public const string GENERAL = "General";
+            }
+
+            public static ConfigEntry<bool> isEnabled;
+
+            public static ConfigEntry<string> jsonSuffix;
+            public static ConfigEntry<bool> forceLoadJson;
+
+            public static ConfigEntry<bool> formatJson;
+
+            public static void Init(ConfigFile config)
+            {
+                isEnabled = config.Bind(SECTION_NAMES.ENABLED_DISABLED, "ExtractSaveFiles", true, "Enable extraction of save files.");
+                if (!isEnabled.Value)
+                {
+                    _logger.LogInfo("Plugin is disabled! No extraction of save files nor loading of extracted .json files will occur!");
+                    return;
+                }
+
+                jsonSuffix = config.Bind(SECTION_NAMES.GENERAL, "ExtractedJsonSuffix", "extracted", "The string that will be appended after the filename to prevent overwriting of the default slot_#.json file. Leaving it empty will overwrite it.");
+                forceLoadJson = config.Bind(SECTION_NAMES.GENERAL, "ForceLoadJsonFiles", true, "Whether to read the extracted .json save files instead of the .mp save files, if available.");
+                
+                formatJson = config.Bind(SECTION_NAMES.GENERAL, "FormatJsonFiles", true, "Whether to prettify the extracted .json save file in a nice format upon saving.");
+            }
+        }
 
         public static string saveDirPath;
 
-        private static bool _isSerializerOriginal = true;
+        private static bool _needsSerializerPatchUpdate = true;
 
-        private static ManualLogSource _logger;
-
-        private void Awake()
+        protected void Awake()
         {
-            isEnabled = Config.Bind("Enabled/Disabled", "ExtractSaveFiles", true, "Enable extraction of save files.");
-            if (!isEnabled.Value)
-            {
-                Logger.LogInfo("Plugin is disabled! No extraction of save files nor loading of extracted .json files will occur!");
-                return;
-            }
+            _logger = Logger;
 
-            jsonSuffix = Config.Bind("General", "ExtractedJsonSuffix", "extracted", "The string that will be appended after the filename to prevent overwriting of the default slot_#.json file. Leaving it empty will overwrite it.");
-            forceLoadJson = Config.Bind("General", "ForceLoadJsonFiles", true, "Whether to read the extracted .json save files instead of the .mp save files, if available.");
+            Settings.Init(Config);
+            Settings.formatJson.SettingChanged += (_self, _args) => _needsSerializerPatchUpdate = true;
+
+            Harmony.CreateAndPatchAll(typeof(Plugin));
 
             saveDirPath = Path.Combine(Application.persistentDataPath, "saves");
 
-            _logger = Logger;
-
-            Harmony.CreateAndPatchAll(typeof(Plugin));
-            Logger.LogMessage("Plugin has been loaded!");
+            _logger.LogMessage("Plugin has been loaded!");
         }
 
         [HarmonyPatch(typeof(SaveFileManager), "Write")]
         [HarmonyPostfix]
         public static void SaveFileManager_Write(SaveFileManager __instance, DataManager data, string filename, bool encrypt, bool backup)
         {
-            if (_isSerializerOriginal) PatchSerializer();
+            if (_needsSerializerPatchUpdate) PatchSerializer();
 
             bool isSaveFile = filename.StartsWith("slot_");
             if (!isSaveFile) return;
@@ -87,7 +107,7 @@ namespace CotlSaveExtractorLoader
 
             string parsedFilename = ParseRawFilename(filename);
 
-            if (forceLoadJson.Value && File.Exists(Path.Combine(saveDirPath, parsedFilename))) filename = parsedFilename;
+            if (Settings.forceLoadJson.Value && File.Exists(Path.Combine(saveDirPath, parsedFilename))) filename = parsedFilename;
             _logger.LogMessage("Loading extracted \"" + filename + "\" save file...");
 
             return true;
@@ -95,15 +115,17 @@ namespace CotlSaveExtractorLoader
 
         private static void PatchSerializer()
         {
-            _isSerializerOriginal = false;
+            _needsSerializerPatchUpdate = false;
 
-            MMSerialization.JsonSerializerSettings.Formatting = Formatting.Indented;
+            bool doFormatting = Settings.formatJson.Value;
+
+            MMSerialization.JsonSerializerSettings.Formatting = doFormatting ? Formatting.Indented : Formatting.None;
             MMSerialization.JsonSerializer = JsonSerializer.Create(MMSerialization.JsonSerializerSettings);
         }
 
         private static string ParseRawFilename(string filename)
         {
-            return Path.ChangeExtension(jsonSuffix.Value == "" ? filename : Path.GetFileNameWithoutExtension(filename) + "-" + jsonSuffix.Value, ".json");
+            return Path.ChangeExtension(Settings.jsonSuffix.Value == "" ? filename : Path.GetFileNameWithoutExtension(filename) + "-" + Settings.jsonSuffix.Value, ".json");
         }
     }
 }
