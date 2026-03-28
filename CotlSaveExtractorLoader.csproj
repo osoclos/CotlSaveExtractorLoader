@@ -76,7 +76,7 @@
 		<StartWorkingDirectory>$(RootDirPath)</StartWorkingDirectory>
 		
 		<PostBuildEvent>
-			mkdir -p "$(PluginDirPath)$(SolutionName)\"
+			mkdir "$(PluginDirPath)$(SolutionName)\"
 
 			xcopy "$(TargetDir)$(SolutionName).dll" "$(PluginDirPath)$(SolutionName)\" /Y /I
 			xcopy "$(TargetDir)$(SolutionName).pdb" "$(PluginDirPath)$(SolutionName)\" /Y /I
