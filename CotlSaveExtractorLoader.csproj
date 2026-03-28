@@ -46,6 +46,10 @@
 			<Private>false</Private>
 		</Reference>
 
+		<Reference Include="Newtonsoft.Json">
+			<HintPath>$(ManagedDirPath)Newtonsoft.Json.dll</HintPath>
+		</Reference>
+		
 		<Reference Include="Assembly-CSharp">
 			<HintPath>$(ManagedDirPath)Assembly-CSharp.dll</HintPath>
 		</Reference>

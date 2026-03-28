@@ -9,6 +9,9 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 
+using Data.Serialization;
+using Newtonsoft.Json;
+
 using SaveFileManager = MMJsonDataReadWriter<DataManager>;
 
 namespace CotlSaveExtractorLoader
@@ -33,6 +36,8 @@ namespace CotlSaveExtractorLoader
         public static ConfigEntry<bool> forceLoadJson;
 
         public static string saveDirPath;
+
+        private static bool _isSerializerOriginal = true;
 
         private static ManualLogSource _logger;
 
@@ -60,6 +65,8 @@ namespace CotlSaveExtractorLoader
         [HarmonyPostfix]
         public static void SaveFileManager_Write(SaveFileManager __instance, DataManager data, string filename, bool encrypt, bool backup)
         {
+            if (_isSerializerOriginal) PatchSerializer();
+
             bool isSaveFile = filename.StartsWith("slot_");
             if (!isSaveFile) return;
 
@@ -84,6 +91,14 @@ namespace CotlSaveExtractorLoader
             _logger.LogMessage("Loading extracted \"" + filename + "\" save file...");
 
             return true;
+        }
+
+        private static void PatchSerializer()
+        {
+            _isSerializerOriginal = false;
+
+            MMSerialization.JsonSerializerSettings.Formatting = Formatting.Indented;
+            MMSerialization.JsonSerializer = JsonSerializer.Create(MMSerialization.JsonSerializerSettings);
         }
 
         private static string ParseRawFilename(string filename)
