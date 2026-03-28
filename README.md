@@ -92,3 +92,7 @@ The string that will be appended after the filename to prevent overwriting of th
 ### `ForceLoadJsonFiles` (default: `true`)
 
 Whether to read the extracted `.json` save files instead of the `.mp` save files, if available.
+
+### `FormatJsonFiles` (default: `true`)
+
+Whether to prettify the extracted `.json` save file into a nice format upon saving.

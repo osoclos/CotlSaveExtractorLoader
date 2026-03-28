@@ -59,7 +59,7 @@ namespace CotlSaveExtractorLoader
                 jsonSuffix = config.Bind(SECTION_NAMES.GENERAL, "ExtractedJsonSuffix", "extracted", "The string that will be appended after the filename to prevent overwriting of the default slot_#.json file. Leaving it empty will overwrite it.");
                 forceLoadJson = config.Bind(SECTION_NAMES.GENERAL, "ForceLoadJsonFiles", true, "Whether to read the extracted .json save files instead of the .mp save files, if available.");
                 
-                formatJson = config.Bind(SECTION_NAMES.GENERAL, "FormatJsonFiles", true, "Whether to prettify the extracted .json save file in a nice format upon saving.");
+                formatJson = config.Bind(SECTION_NAMES.GENERAL, "FormatJsonFiles", true, "Whether to prettify the extracted .json save file into a nice format upon saving.");
             }
         }
 
