@@ -69,6 +69,11 @@ There is a lot of data that you can mess around with in the extracted `.json` sa
 
 5. Go forth and explore further! There is so much to modifying save files (and modding in general) and I hope this little adventure serves as a starting point to give you the headstart you need to move on!
 
+## Notes
+
+Before using this plugin, here are some good things to note before you start toying around with it
+- If you decide to edit any extracted files and try to save your save file within the game afterwards, your edits will **DISAPPEAR**! Make sure that you always quit the game before you start making edits.
+
 ## Docs
 
 Some of the save file data, such as item IDs, are not alphabetical identifiers and as such, can be difficult to decipher without any references.
@@ -99,4 +104,4 @@ Whether to prettify the extracted `.json` save file into a nice format upon savi
 
 ### `IncludeMetaFiles` (default: `true`)
 
-Include `meta_#.mp/json` files in the extraction and loading processes.
+Include `meta_#.mp`/`.json` files in the extraction and loading processes.
