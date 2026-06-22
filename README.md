@@ -96,3 +96,7 @@ Whether to read the extracted `.json` save files instead of the `.mp` save files
 ### `FormatJsonFiles` (default: `true`)
 
 Whether to prettify the extracted `.json` save file into a nice format upon saving.
+
+### `IncludeMetaFiles` (default: `true`)
+
+Include `meta_#.mp/json` files in the extraction and loading processes.
