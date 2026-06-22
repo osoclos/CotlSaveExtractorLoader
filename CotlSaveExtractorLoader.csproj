@@ -10,7 +10,7 @@
 		<PackAsTool>false</PackAsTool>
 
         <PackageOutputPath>$(TargetPath)</PackageOutputPath>
-        <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
+        <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     </PropertyGroup>
 
     <ItemGroup>
@@ -79,7 +79,7 @@
 			mkdir "$(PluginDirPath)$(SolutionName)\"
 
 			xcopy "$(TargetDir)$(SolutionName).dll" "$(PluginDirPath)$(SolutionName)\" /Y /I
-			xcopy "$(TargetDir)$(SolutionName).pdb" "$(PluginDirPath)$(SolutionName)\" /Y /I
+			if exist "$(TargetDir)$(SolutionName).pdb" xcopy "$(TargetDir)$(SolutionName).pdb" "$(PluginDirPath)$(SolutionName)\" /Y /I
 		</PostBuildEvent>
 	</PropertyGroup>
 </Project>

@@ -12,11 +12,12 @@ using BepInEx.Logging;
 using Data.Serialization;
 using Newtonsoft.Json;
 
-using SaveFileManager = MMJsonDataReadWriter<DataManager>;
+using SaveFileDataIO = MMJsonDataReadWriter<DataManager>;
+using SaveFileMetaIO = MMJsonDataReadWriter<MetaData>;
 
 namespace CotlSaveExtractorLoader
 {
-    public struct Metadata
+    public struct PluginMetadata
     {
         public const string Id = "mod.osoclos.cotl.save-extractor-loader";
         public const string Name = "Cult of the Lamb Save File Extractor and Loader";
@@ -24,7 +25,7 @@ namespace CotlSaveExtractorLoader
         public const string Version = "1.0.1.0";
     }
 
-    [BepInPlugin(Metadata.Id, Metadata.Name, Metadata.Version)]
+    [BepInPlugin(PluginMetadata.Id, PluginMetadata.Name, PluginMetadata.Version)]
     [BepInProcess("Cult of the Lamb.exe")]
 
     [HarmonyPatch]
@@ -47,6 +48,8 @@ namespace CotlSaveExtractorLoader
 
             public static ConfigEntry<bool> formatJson;
 
+            public static ConfigEntry<bool> includeMetaFiles;
+
             public static void Init(ConfigFile config)
             {
                 isEnabled = config.Bind(SECTION_NAMES.ENABLED_DISABLED, "ExtractSaveFiles", true, "Enable extraction of save files.");
@@ -60,6 +63,8 @@ namespace CotlSaveExtractorLoader
                 forceLoadJson = config.Bind(SECTION_NAMES.GENERAL, "ForceLoadJsonFiles", true, "Whether to read the extracted .json save files instead of the .mp save files, if available.");
                 
                 formatJson = config.Bind(SECTION_NAMES.GENERAL, "FormatJsonFiles", true, "Whether to prettify the extracted .json save file into a nice format upon saving.");
+
+                includeMetaFiles = config.Bind(SECTION_NAMES.GENERAL, "IncludeMetaFiles", true, "Include meta_#.mp/json files in the extraction and loading processes.");
             }
         }
 
@@ -72,7 +77,7 @@ namespace CotlSaveExtractorLoader
             _logger = Logger;
 
             Settings.Init(Config);
-            Settings.formatJson.SettingChanged += (_self, _args) => _needsSerializerPatchUpdate = true;
+            Settings.formatJson.SettingChanged += (_self, args) =>_needsSerializerPatchUpdate = true;
 
             Harmony.CreateAndPatchAll(typeof(Plugin));
 
@@ -81,36 +86,56 @@ namespace CotlSaveExtractorLoader
             _logger.LogMessage("Plugin has been loaded!");
         }
 
-        [HarmonyPatch(typeof(SaveFileManager), "Write")]
+        [HarmonyPatch(typeof(SaveFileDataIO), "Write")]
         [HarmonyPostfix]
-        public static void SaveFileManager_Write(SaveFileManager __instance, DataManager data, string filename, bool encrypt, bool backup)
+        public static void SaveFileDataIO_Write(SaveFileDataIO __instance, DataManager data, string filename, bool encrypt, bool backup)
         {
             if (_needsSerializerPatchUpdate) PatchSerializer();
+            if (filename.StartsWith("slot_")) WriteToIO(__instance, data, filename);
+        }
 
-            bool isSaveFile = filename.StartsWith("slot_");
-            if (!isSaveFile) return;
+        [HarmonyPatch(typeof(SaveFileDataIO), "Read")]
+        [HarmonyPrefix]
+        public static bool SaveFileDataIO_Read(ref string filename)
+        {
+            if (filename.StartsWith("slot_")) filename = ParseForIORead(filename);
+            return true;
+        }
 
-            var WriteJson = AccessTools.MethodDelegate<Action<SaveFileManager, DataManager, string, bool, bool>>(AccessTools.Method(typeof(SaveFileManager), "WriteJson"));
+        [HarmonyPatch(typeof(SaveFileMetaIO), "Write")]
+        [HarmonyPostfix]
+        public static void SaveFileMetaIO_Write(SaveFileMetaIO __instance, MetaData data, string filename, bool encrypt, bool backup)
+        {
+            if (_needsSerializerPatchUpdate) PatchSerializer();
+            if (Settings.includeMetaFiles.Value && filename.StartsWith("meta_")) WriteToIO(__instance, data, filename);
+        }
 
+        [HarmonyPatch(typeof(SaveFileMetaIO), "Read")]
+        [HarmonyPrefix]
+        public static bool SaveFileMetaIO_Read(ref string filename)
+        {
+            if (Settings.includeMetaFiles.Value && filename.StartsWith("meta_")) filename = ParseForIORead(filename);
+            return true;
+        }
+
+        private static void WriteToIO<T>(MMJsonDataReadWriter<T> io, T data, string filename)
+        {
             string parsedFilename = ParseRawFilename(filename);
-            WriteJson.Invoke(__instance, data, parsedFilename, false, false);
+
+            var WriteJson = AccessTools.MethodDelegate<Action<MMJsonDataReadWriter<T>, T, string, bool, bool>>(AccessTools.Method(typeof(MMJsonDataReadWriter<T>), "WriteJson"));
+            WriteJson.Invoke(io, data, parsedFilename, false, false);
 
             _logger.LogMessage("Extraction of \"" + filename + "\" is complete and saved as \"" + parsedFilename + "\".");
         }
 
-        [HarmonyPatch(typeof(SaveFileManager), "Read")]
-        [HarmonyPrefix]
-        public static bool SaveFileManager_Read(ref string filename)
+        private static string ParseForIORead(string filename)
         {
-            bool isSaveFile = filename.StartsWith("slot_");
-            if (!isSaveFile) return true;
-
             string parsedFilename = ParseRawFilename(filename);
 
-            if (Settings.forceLoadJson.Value && File.Exists(Path.Combine(saveDirPath, parsedFilename))) filename = parsedFilename;
-            _logger.LogMessage("Loading extracted \"" + filename + "\" save file...");
+            bool canExtract = Settings.forceLoadJson.Value && File.Exists(Path.Combine(saveDirPath, parsedFilename));
 
-            return true;
+            _logger.LogMessage("Loading " + (canExtract ? "extracted" : "encrypted") + " \"" + filename + "\" save file...");
+            return canExtract ? parsedFilename : filename;
         }
 
         private static void PatchSerializer()
