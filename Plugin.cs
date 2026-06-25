@@ -9,8 +9,9 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 
-using Data.Serialization;
 using Newtonsoft.Json;
+
+using Data.Serialization;
 
 using SaveFileDataIO = MMJsonDataReadWriter<DataManager>;
 using SaveFileMetaIO = MMJsonDataReadWriter<MetaData>;
@@ -22,7 +23,7 @@ namespace CotlSaveExtractorLoader
         public const string Id = "mod.osoclos.cotl.save-extractor-loader";
         public const string Name = "Cult of the Lamb Save File Extractor and Loader";
 
-        public const string Version = "1.0.2.0";
+        public const string Version = "1.1.0.0";
     }
 
     [BepInPlugin(PluginMetadata.Id, PluginMetadata.Name, PluginMetadata.Version)]
@@ -31,90 +32,102 @@ namespace CotlSaveExtractorLoader
     [HarmonyPatch]
     public class Plugin: BaseUnityPlugin
     {
-        private static ManualLogSource _logger;
+        private static ManualLogSource logger;
 
         public static class Settings
         {
             public readonly struct SECTION_NAMES
             {
-                public const string ENABLED_DISABLED = "Enabled/Disabled";
-                public const string GENERAL = "General";
+                public const string EXTRACTION_LOADING = "Extraction/Loading";
+                public const string BEHAVIOR = "Behavior";
+
+                public const string FORMATTING = "Formatting";
             }
 
             public static ConfigEntry<bool> isEnabled;
+            public static ConfigEntry<bool> loadExtractedFiles;
+
+            public static ConfigEntry<bool> overwriteOriginalFiles;
+            public static ConfigEntry<bool> lockAndExtractMetaFiles;
 
             public static ConfigEntry<string> jsonSuffix;
-            public static ConfigEntry<bool> forceLoadJson;
-
             public static ConfigEntry<bool> formatJson;
-
-            public static ConfigEntry<bool> includeMetaFiles;
 
             public static void Init(ConfigFile config)
             {
-                isEnabled = config.Bind(SECTION_NAMES.ENABLED_DISABLED, "ExtractSaveFiles", true, "Enable extraction of save files.");
-                if (!isEnabled.Value)
-                {
-                    _logger.LogInfo("Plugin is disabled! No extraction of save files nor loading of extracted .json files will occur!");
-                    return;
-                }
+                isEnabled = config.Bind(SECTION_NAMES.EXTRACTION_LOADING, "ExtractSaveFiles", true, "Enable extraction of save files.");
+                loadExtractedFiles = config.Bind(SECTION_NAMES.EXTRACTION_LOADING, "LoadExtractedFiles", true, "Whether to read the extracted .json save files instead of the .mp save files, if available.");
 
-                jsonSuffix = config.Bind(SECTION_NAMES.GENERAL, "ExtractedJsonSuffix", "extracted", "The string that will be appended after the filename to prevent overwriting of the default slot_#.json file. Leaving it empty will overwrite it.");
-                forceLoadJson = config.Bind(SECTION_NAMES.GENERAL, "ForceLoadJsonFiles", true, "Whether to read the extracted .json save files instead of the .mp save files, if available.");
+                overwriteOriginalFiles = config.Bind(SECTION_NAMES.BEHAVIOR, "OverwriteOriginalFiles", true, "Allow the plugin to overwrite the original encrypted .mp save files.");
+                lockAndExtractMetaFiles = config.Bind(SECTION_NAMES.BEHAVIOR, "LockAndExtractMetaFiles", false, "Include meta_#.mp/json files in the extraction and loading process and lock extracted meta_#.json files from being saved by the game.");
                 
-                formatJson = config.Bind(SECTION_NAMES.GENERAL, "FormatJsonFiles", true, "Whether to prettify the extracted .json save file into a nice format upon saving.");
-
-                includeMetaFiles = config.Bind(SECTION_NAMES.GENERAL, "IncludeMetaFiles", true, "Include meta_#.mp/json files in the extraction and loading processes.");
+                jsonSuffix = config.Bind(SECTION_NAMES.FORMATTING, "ExtractedJsonSuffix", "extracted", "The string that will be appended after the filename to prevent overwriting of the default slot_#.json file. Leaving it empty will overwrite it.");
+                formatJson = config.Bind(SECTION_NAMES.FORMATTING, "FormatJsonFiles", true, "Whether to prettify the extracted .json save file into a nice format upon saving.");
             }
         }
 
-        public static string saveDirPath;
+        public static readonly string FILE_SLOT_PREFIX = "slot_";
+        public static readonly string FILE_META_PREFIX = "meta_";
 
-        private static bool _needsSerializerPatchUpdate = true;
+        public static string saveDirPath;
 
         protected void Awake()
         {
-            _logger = Logger;
-
             Settings.Init(Config);
-            Settings.formatJson.SettingChanged += (_self, args) =>_needsSerializerPatchUpdate = true;
 
-            Harmony.CreateAndPatchAll(typeof(Plugin));
+            bool isEnabled = Settings.isEnabled.Value;
+
+            logger = Logger;
+            logger.LogMessage(isEnabled ? "Plugin has been loaded!" : "Plugin is disabled! No extraction of save files nor loading of extracted .json files will occur!");
+
+            if (!isEnabled) return;
 
             saveDirPath = Path.Combine(Application.persistentDataPath, "saves");
 
-            _logger.LogMessage("Plugin has been loaded!");
+            bool doFormatting = Settings.formatJson.Value;
+
+            MMSerialization.JsonSerializerSettings.Formatting = doFormatting ? Formatting.Indented : Formatting.None;
+            MMSerialization.JsonSerializer = JsonSerializer.Create(MMSerialization.JsonSerializerSettings);
+
+            Harmony.CreateAndPatchAll(typeof(Plugin));
         }
 
         [HarmonyPatch(typeof(SaveFileDataIO), "Write")]
-        [HarmonyPostfix]
-        public static void SaveFileDataIO_Write(SaveFileDataIO __instance, DataManager data, string filename, bool encrypt, bool backup)
+        [HarmonyPrefix]
+        public static bool SaveFileDataIO_Write(SaveFileDataIO __instance, DataManager data, string filename, bool encrypt, bool backup)
         {
-            if (_needsSerializerPatchUpdate) PatchSerializer();
-            if (filename.StartsWith("slot_")) WriteToIO(__instance, data, filename);
+            if (filename.StartsWith(FILE_SLOT_PREFIX)) WriteToIO(__instance, data, filename);
+            return Settings.overwriteOriginalFiles.Value;
         }
 
         [HarmonyPatch(typeof(SaveFileDataIO), "Read")]
         [HarmonyPrefix]
         public static bool SaveFileDataIO_Read(ref string filename)
         {
-            if (filename.StartsWith("slot_")) filename = ParseForIORead(filename);
+            if (filename.StartsWith(FILE_SLOT_PREFIX)) filename = ParseForIORead(filename);
             return true;
         }
 
         [HarmonyPatch(typeof(SaveFileMetaIO), "Write")]
-        [HarmonyPostfix]
-        public static void SaveFileMetaIO_Write(SaveFileMetaIO __instance, MetaData data, string filename, bool encrypt, bool backup)
+        [HarmonyPrefix]
+        public static bool SaveFileMetaIO_Write(SaveFileMetaIO __instance, MetaData data, string filename, bool encrypt, bool backup)
         {
-            if (_needsSerializerPatchUpdate) PatchSerializer();
-            if (Settings.includeMetaFiles.Value && filename.StartsWith("meta_")) WriteToIO(__instance, data, filename);
+            bool overwriteOriginalFiles = Settings.overwriteOriginalFiles.Value;
+            bool lockAndExtractMetaFiles = Settings.lockAndExtractMetaFiles.Value;
+
+            if (!lockAndExtractMetaFiles) return true;
+
+            string parsedFilename = ParseRawFilename(filename);
+            
+            if (filename.StartsWith(FILE_META_PREFIX) && !File.Exists(Path.Combine(saveDirPath, parsedFilename))) WriteToIO(__instance, data, filename);
+            return overwriteOriginalFiles;
         }
 
         [HarmonyPatch(typeof(SaveFileMetaIO), "Read")]
         [HarmonyPrefix]
         public static bool SaveFileMetaIO_Read(ref string filename)
         {
-            if (Settings.includeMetaFiles.Value && filename.StartsWith("meta_")) filename = ParseForIORead(filename);
+            if (filename.StartsWith(FILE_META_PREFIX)) filename = ParseForIORead(filename);
             return true;
         }
 
@@ -125,32 +138,25 @@ namespace CotlSaveExtractorLoader
             var WriteJson = AccessTools.MethodDelegate<Action<MMJsonDataReadWriter<T>, T, string, bool, bool>>(AccessTools.Method(typeof(MMJsonDataReadWriter<T>), "WriteJson"));
             WriteJson.Invoke(io, data, parsedFilename, false, false);
 
-            _logger.LogMessage("Extraction of \"" + filename + "\" is complete and saved as \"" + parsedFilename + "\".");
+            logger.LogMessage("Extraction of \"" + filename + "\" is complete and saved as \"" + parsedFilename + "\".");
         }
 
         private static string ParseForIORead(string filename)
         {
             string parsedFilename = ParseRawFilename(filename);
 
-            bool canExtract = Settings.forceLoadJson.Value && File.Exists(Path.Combine(saveDirPath, parsedFilename));
+            bool canExtract = Settings.loadExtractedFiles.Value && File.Exists(Path.Combine(saveDirPath, parsedFilename));
 
-            _logger.LogMessage("Loading " + (canExtract ? "extracted" : "encrypted") + " \"" + filename + "\" save file...");
-            return canExtract ? parsedFilename : filename;
-        }
+            string finalFilename = canExtract ? parsedFilename : filename;
 
-        private static void PatchSerializer()
-        {
-            _needsSerializerPatchUpdate = false;
-
-            bool doFormatting = Settings.formatJson.Value;
-
-            MMSerialization.JsonSerializerSettings.Formatting = doFormatting ? Formatting.Indented : Formatting.None;
-            MMSerialization.JsonSerializer = JsonSerializer.Create(MMSerialization.JsonSerializerSettings);
+            logger.LogMessage("Loading " + (canExtract ? "extracted" : "encrypted") + " \"" + finalFilename + "\" save file...");
+            return finalFilename;
         }
 
         private static string ParseRawFilename(string filename)
         {
-            return Path.ChangeExtension(Settings.jsonSuffix.Value == "" ? filename : Path.GetFileNameWithoutExtension(filename) + "-" + Settings.jsonSuffix.Value, ".json");
+            string jsonSuffix = Settings.jsonSuffix.Value;
+            return Path.ChangeExtension(jsonSuffix == "" ? filename : Path.GetFileNameWithoutExtension(filename) + "-" + jsonSuffix, ".json");
         }
     }
 }
