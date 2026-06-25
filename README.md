@@ -84,24 +84,34 @@ Fortunately, people have made such [a list](https://docs.google.com/spreadsheets
 
 ## Configuration Options
 
-This contains the description of configuration entries for this plugin. (`mod.osoclos.cotl.save-extractor-loader.cfg`)
+This contains the description of configuration entries for this plugin. (`mod.osoclos.cotl.save-extractor-loader.cfg`) It is recommended that you delete the configuration file each time you update this plugin.
 
-### `ExtractSaveFiles` (default: `true`)
+### Extraction/Loading
+
+#### `ExtractSaveFiles` (default: `true`)
 
 Enable extraction of save files.
 
-### `ExtractedJsonSuffix` (default: `"extracted"`)
-
-The string that will be appended after the filename to prevent overwriting of the default `slot_#.json` file. Leaving it empty will overwrite it.
-
-### `ForceLoadJsonFiles` (default: `true`)
+#### `LoadExtractedFiles` (default: `true`)
 
 Whether to read the extracted `.json` save files instead of the `.mp` save files, if available.
 
-### `FormatJsonFiles` (default: `true`)
+### Behavior
+
+#### `OverwriteOriginalFiles` (default: `true`)
+
+Allow the plugin to overwrite the original encrypted `.mp` save files.
+
+#### `LockAndExtractMetaFiles` (default: `false`)
+
+Include `meta_#.mp`/`.json` files in the extraction and loading process and lock extracted meta_#.json files from being saved by the game.
+
+### Formatting
+
+#### `ExtractedJsonSuffix` (default: `"extracted"`)
+
+The string that will be appended after the filename to prevent overwriting of the default legacy `slot_#.json` file. Leaving it empty will overwrite it.
+
+#### `FormatJsonFiles` (default: `true`)
 
 Whether to prettify the extracted `.json` save file into a nice format upon saving.
-
-### `IncludeMetaFiles` (default: `true`)
-
-Include `meta_#.mp`/`.json` files in the extraction and loading processes.

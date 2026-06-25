@@ -61,7 +61,7 @@ namespace CotlSaveExtractorLoader
                 overwriteOriginalFiles = config.Bind(SECTION_NAMES.BEHAVIOR, "OverwriteOriginalFiles", true, "Allow the plugin to overwrite the original encrypted .mp save files.");
                 lockAndExtractMetaFiles = config.Bind(SECTION_NAMES.BEHAVIOR, "LockAndExtractMetaFiles", false, "Include meta_#.mp/json files in the extraction and loading process and lock extracted meta_#.json files from being saved by the game.");
                 
-                jsonSuffix = config.Bind(SECTION_NAMES.FORMATTING, "ExtractedJsonSuffix", "extracted", "The string that will be appended after the filename to prevent overwriting of the default slot_#.json file. Leaving it empty will overwrite it.");
+                jsonSuffix = config.Bind(SECTION_NAMES.FORMATTING, "ExtractedJsonSuffix", "extracted", "The string that will be appended after the filename to prevent overwriting of the default legacy slot_#.json file. Leaving it empty will overwrite it.");
                 formatJson = config.Bind(SECTION_NAMES.FORMATTING, "FormatJsonFiles", true, "Whether to prettify the extracted .json save file into a nice format upon saving.");
             }
         }
